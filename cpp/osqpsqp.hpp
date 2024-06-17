@@ -15,6 +15,7 @@ struct ConstraintInterface {
                              Eigen::VectorXd &upper,
                              size_t constraint_idx_head) = 0;
   virtual size_t get_cdim() = 0;
+  virtual ~ConstraintInterface() {}
 };
 
 struct EqualityConstraintInterface : public ConstraintInterface {
