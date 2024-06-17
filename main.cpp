@@ -1,7 +1,7 @@
-#include "osqp_sqp.hpp"
+#include "osqpsqp.hpp"
 #include <memory>
 
-using namespace osqp_sqp;
+using namespace osqpsqp;
 
 class MyEqConst : public EqualityConstraintInterface {
 public:
