@@ -126,6 +126,11 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
 
     osqp::OsqpSolver solver;
     osqp::OsqpSettings settings;
+    settings.verbose = option_.osqp_verbose;
+    if (option_.osqp_force_deterministic) {
+      settings.adaptive_rho_interval = 25.0;
+    }
+
     const auto init_status = solver.Init(instance, settings);
     const auto osqp_exit_code = solver.Solve();
     Eigen::Map<const Eigen::VectorXd> primal_solution =

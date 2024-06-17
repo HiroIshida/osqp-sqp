@@ -70,6 +70,8 @@ public:
 struct NLPSolverOption {
   size_t max_iter = 20;
   std::optional<double> ftol = 1e-3;
+  bool osqp_verbose = false;
+  bool osqp_force_deterministic = false;
 };
 
 class NLPSolver {
