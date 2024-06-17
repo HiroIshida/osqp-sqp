@@ -11,23 +11,24 @@ struct ConstraintInterface {
   virtual void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                         SMatrix &jacobian, size_t constraint_idx_head) = 0;
 
-  virtual void evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
+  virtual bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                              SMatrix &jacobian, Eigen::VectorXd &lower,
                              Eigen::VectorXd &upper,
                              size_t constraint_idx_head) = 0;
   virtual size_t get_cdim() = 0;
   virtual ~ConstraintInterface() {}
+  double tol = 1e-6;
 };
 
 struct EqualityConstraintInterface : public ConstraintInterface {
-  void evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
+  bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
                      Eigen::VectorXd &upper,
                      size_t constraint_idx_head) override;
 };
 
 struct InequalityConstraintInterface : public ConstraintInterface {
-  void evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
+  bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
                      Eigen::VectorXd &upper,
                      size_t constraint_idx_head) override;
@@ -38,8 +39,8 @@ public:
   BoxConstraint(const Eigen::VectorXd &lb, const Eigen::VectorXd &ub)
       : lb_(lb), ub_(ub) {}
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
-                SMatrix &jacobian, size_t constraint_idx_head);
-  void evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
+                SMatrix &jacobian, size_t constraint_idx_head) override;
+  bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
                      Eigen::VectorXd &upper,
                      size_t constraint_idx_head) override;
@@ -57,7 +58,7 @@ public:
     constraints_.push_back(c);
   }
 
-  void evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
+  bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
                      Eigen::VectorXd &upper);
 
@@ -68,11 +69,7 @@ public:
 
 struct NLPSolverOption {
   size_t max_iter = 20;
-  double ceq_tol = 1e-4;
-  double cineq_tol = 1e-4;
   std::optional<double> ftol = 1e-3;
-  // if ftol=std::nullopt, then return immediately when a feasible solution is
-  // found
 };
 
 class NLPSolver {

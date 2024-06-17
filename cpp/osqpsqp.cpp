@@ -3,7 +3,7 @@
 
 namespace osqpsqp {
 
-void EqualityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
+bool EqualityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
                                                 Eigen::VectorXd &values,
                                                 SMatrix &jacobian,
                                                 Eigen::VectorXd &lower,
@@ -11,12 +11,17 @@ void EqualityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
                                                 size_t constraint_idx_head) {
   evaluate(x, values, jacobian, constraint_idx_head);
   auto jac_sliced = jacobian.middleRows(constraint_idx_head, get_cdim());
-  auto tmp = jac_sliced * x - values.segment(constraint_idx_head, get_cdim());
+  auto value_sliced = values.segment(constraint_idx_head, get_cdim());
+  auto tmp = jac_sliced * x - value_sliced;
   lower.segment(constraint_idx_head, get_cdim()) = tmp;
   upper.segment(constraint_idx_head, get_cdim()) = tmp;
+
+  double max_error = value_sliced.array().abs().maxCoeff();
+  bool is_feasible = max_error < tol;
+  return is_feasible;
 }
 
-void InequalityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
+bool InequalityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
                                                   Eigen::VectorXd &values,
                                                   SMatrix &jacobian,
                                                   Eigen::VectorXd &lower,
@@ -24,10 +29,14 @@ void InequalityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
                                                   size_t constraint_idx_head) {
   evaluate(x, values, jacobian, constraint_idx_head);
   auto jac_sliced = jacobian.middleRows(constraint_idx_head, get_cdim());
+  auto value_sliced = values.segment(constraint_idx_head, get_cdim());
   lower.segment(constraint_idx_head, get_cdim()) =
-      jac_sliced * x - values.segment(constraint_idx_head, get_cdim());
+      jac_sliced * x - value_sliced;
   upper.segment(constraint_idx_head, get_cdim()) = Eigen::VectorXd::Constant(
       get_cdim(), std::numeric_limits<double>::infinity());
+
+  bool is_feasible = (value_sliced.array() > -tol).all();
+  return is_feasible;
 }
 
 void BoxConstraint::evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
@@ -38,7 +47,7 @@ void BoxConstraint::evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
   }
 }
 
-void BoxConstraint::evaluate_full(const Eigen::VectorXd &x,
+bool BoxConstraint::evaluate_full(const Eigen::VectorXd &x,
                                   Eigen::VectorXd &values, SMatrix &jacobian,
                                   Eigen::VectorXd &lower,
                                   Eigen::VectorXd &upper,
@@ -46,17 +55,25 @@ void BoxConstraint::evaluate_full(const Eigen::VectorXd &x,
   evaluate(x, values, jacobian, constraint_idx_head);
   lower.segment(constraint_idx_head, get_cdim()) = lb_;
   upper.segment(constraint_idx_head, get_cdim()) = ub_;
+  auto value_sliced = values.segment(constraint_idx_head, get_cdim());
+  bool is_feasible = (value_sliced.array() >= lb_.array() - tol).all() &&
+                     (value_sliced.array() <= ub_.array() + tol).all();
+  return is_feasible;
 }
 
-void ConstraintSet::evaluate_full(const Eigen::VectorXd &x,
+bool ConstraintSet::evaluate_full(const Eigen::VectorXd &x,
                                   Eigen::VectorXd &values, SMatrix &jacobian,
                                   Eigen::VectorXd &lower,
                                   Eigen::VectorXd &upper) {
   size_t constraint_idx_head = 0;
+  bool is_feasible = true;
   for (auto c : constraints_) {
-    c->evaluate_full(x, values, jacobian, lower, upper, constraint_idx_head);
+    bool is_feasible_partial = c->evaluate_full(x, values, jacobian, lower,
+                                                upper, constraint_idx_head);
     constraint_idx_head += c->get_cdim();
+    is_feasible = is_feasible && is_feasible_partial;
   }
+  return is_feasible;
 }
 
 size_t ConstraintSet::get_cdim() {
@@ -84,10 +101,20 @@ NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
 
 void NLPSolver::solve(const Eigen::VectorXd &x0) {
   Eigen::VectorXd x = x0;
+  double cost_prev = std::numeric_limits<double>::infinity();
   for (size_t i = 0; i < option_.max_iter; i++) {
-    cstset_->evaluate_full(x, cstset_values_, cstset_jacobian_, cstset_lower_,
-                           cstset_upper_);
+    bool is_feasible = cstset_->evaluate_full(
+        x, cstset_values_, cstset_jacobian_, cstset_lower_, cstset_upper_);
     double cost = (0.5 * x.transpose() * P_ * x + q_.transpose() * x)(0);
+    double cost_diff = cost - cost_prev;
+    bool ftol_satisfied =
+        cost_diff <
+        option_.ftol.value_or(std::numeric_limits<double>::infinity());
+    if (is_feasible && ftol_satisfied) {
+      break;
+    }
+    cost_prev = cost;
+
     Eigen::VectorXd cost_grad = P_ * x + q_;
 
     osqp::OsqpInstance instance;
