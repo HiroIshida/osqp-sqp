@@ -1,0 +1,4 @@
+action.sh
+/build
+compile_commands.json
+/.cache
