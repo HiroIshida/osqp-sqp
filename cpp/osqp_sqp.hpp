@@ -25,7 +25,7 @@ struct EqualityConstraintInterface : public ConstraintInterface {
                      size_t constraint_idx_head) override {
     evaluate(x, values, jacobian, constraint_idx_head);
     auto jac_sliced = jacobian.middleRows(constraint_idx_head, get_cdim());
-    auto tmp = jac_sliced * x - values;
+    auto tmp = jac_sliced * x - values.segment(constraint_idx_head, get_cdim());
     lower.segment(constraint_idx_head, get_cdim()) = tmp;
     upper.segment(constraint_idx_head, get_cdim()) = tmp;
   }
@@ -37,7 +37,8 @@ struct InequalityConstraintInterface : public ConstraintInterface {
                      Eigen::VectorXd &upper, size_t constraint_idx_head) {
     evaluate(x, values, jacobian, constraint_idx_head);
     auto jac_sliced = jacobian.middleRows(constraint_idx_head, get_cdim());
-    lower.segment(constraint_idx_head, get_cdim()) = jac_sliced * x - values;
+    lower.segment(constraint_idx_head, get_cdim()) =
+        jac_sliced * x - values.segment(constraint_idx_head, get_cdim());
     upper.segment(constraint_idx_head, get_cdim()) = Eigen::VectorXd::Constant(
         get_cdim(), std::numeric_limits<double>::infinity());
   }
@@ -116,7 +117,7 @@ public:
 
   void solve(const Eigen::VectorXd &x0) {
     Eigen::VectorXd x = x0;
-    size_t max_iter = 1;
+    size_t max_iter = 10;
     for (size_t i = 0; i < max_iter; i++) {
       cstset_->evaluate_full(x, cstset_values_, cstset_jacobian_, cstset_lower_,
                              cstset_upper_);
@@ -129,7 +130,6 @@ public:
       instance.constraint_matrix = cstset_jacobian_;
       instance.lower_bounds = cstset_lower_;
       instance.upper_bounds = cstset_upper_;
-      std::cout << cstset_jacobian_.toDense() << std::endl;
 
       osqp::OsqpSolver solver;
       osqp::OsqpSettings settings;
