@@ -70,8 +70,12 @@ public:
 
 class ConstraintSet {
 public:
-  ConstraintSet(std::vector<std::shared_ptr<ConstraintInterface>> constraints)
-      : constraints_(constraints) {}
+  ConstraintSet()
+      : constraints_(std::vector<std::shared_ptr<ConstraintInterface>>()) {}
+
+  void add(std::shared_ptr<ConstraintInterface> c) {
+    constraints_.push_back(c);
+  }
 
   void evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
@@ -92,15 +96,6 @@ public:
   };
 
   std::vector<std::shared_ptr<ConstraintInterface>> constraints_;
-  Eigen::VectorXd lower_;
-  Eigen::VectorXd upper_;
-};
-
-struct QuadraticObjective {
-  QuadraticObjective(SMatrix P, Eigen::VectorXd q) : P(P), q(q) {}
-  // 0.5 * x^T P x + q^T x
-  SMatrix P;
-  Eigen::VectorXd q;
 };
 
 class NLPSolver {
@@ -134,6 +129,7 @@ public:
       instance.constraint_matrix = cstset_jacobian_;
       instance.lower_bounds = cstset_lower_;
       instance.upper_bounds = cstset_upper_;
+      std::cout << cstset_jacobian_.toDense() << std::endl;
 
       osqp::OsqpSolver solver;
       osqp::OsqpSettings settings;

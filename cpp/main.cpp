@@ -49,18 +49,13 @@ int main() {
   Eigen::VectorXd lb = Eigen::VectorXd::Constant(2, -3.0);
   Eigen::VectorXd ub = Eigen::VectorXd::Constant(2, 3.0);
 
-  std::shared_ptr<ConstraintInterface> box =
-      std::make_shared<BoxConstraint>(lb, ub);
-  std::shared_ptr<ConstraintInterface> eq = std::make_shared<MyEqConst>();
-  std::shared_ptr<ConstraintInterface> ineq = std::make_shared<MyIneqConst>();
-  std::vector<std::shared_ptr<ConstraintInterface>> constraints{ineq, eq};
-  auto cst = std::make_shared<ConstraintSet>(constraints);
-  std::cout << cst->get_cdim() << std::endl;
-
+  auto cstset = std::make_shared<ConstraintSet>();
+  // cstset->add(std::make_shared<BoxConstraint>(lb, ub));
+  cstset->add(std::make_shared<MyIneqConst>());
+  cstset->add(std::make_shared<MyEqConst>());
   SMatrix P(2, 2);
   P.coeffRef(0, 0) = 1.0;
   P.coeffRef(1, 1) = 1.0;
-
-  auto solver = NLPSolver(2, P, Eigen::VectorXd::Zero(2), cst);
+  auto solver = NLPSolver(2, P, Eigen::VectorXd::Zero(2), cstset);
   solver.solve(Eigen::VectorXd::Zero(2));
 }
