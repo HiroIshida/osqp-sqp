@@ -1,3 +1,5 @@
+set(CMAKE_CXX_STANDARD 17)
+
 find_package(Eigen3 REQUIRED)
 ADD_DEFINITIONS(-DEIGEN_NO_DEBUG)
 include_directories(${EIGEN3_INCLUDE_DIR})

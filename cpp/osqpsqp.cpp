@@ -68,9 +68,10 @@ size_t ConstraintSet::get_cdim() {
 };
 
 NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
-                     std::shared_ptr<ConstraintSet> cstset)
+                     std::shared_ptr<ConstraintSet> cstset,
+                     const NLPSolverOption &option)
     : P_(P), q_(q), cstset_(cstset), cstset_lower_(cstset->get_cdim()),
-      cstset_upper_(cstset->get_cdim()) {
+      cstset_upper_(cstset->get_cdim()), option_(option) {
   Eigen::VectorXd x_dummy = Eigen::VectorXd::Zero(nx);
   Eigen::VectorXd values(cstset->get_cdim());
   cstset_jacobian_ = SMatrix(cstset->get_cdim(), nx);
@@ -83,8 +84,7 @@ NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
 
 void NLPSolver::solve(const Eigen::VectorXd &x0) {
   Eigen::VectorXd x = x0;
-  size_t max_iter = 10;
-  for (size_t i = 0; i < max_iter; i++) {
+  for (size_t i = 0; i < option_.max_iter; i++) {
     cstset_->evaluate_full(x, cstset_values_, cstset_jacobian_, cstset_lower_,
                            cstset_upper_);
     double cost = (0.5 * x.transpose() * P_ * x + q_.transpose() * x)(0);
