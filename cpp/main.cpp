@@ -11,8 +11,7 @@ public:
   }
 
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
-                SMatrix &jacobian,
-                size_t constraint_idx_head) {
+                SMatrix &jacobian, size_t constraint_idx_head) {
     auto head = constraint_idx_head;
     double x0 = x(0);
     double x1 = x(1);
@@ -32,28 +31,26 @@ public:
 
 class MyIneqConst : public EqualityConstraintInterface {
 public:
-  MyIneqConst() {
-  }
+  MyIneqConst() {}
 
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
-                SMatrix &jacobian,
-                size_t constraint_idx_head) {
+                SMatrix &jacobian, size_t constraint_idx_head) {
     double x0 = x(0);
     double x1 = x(1);
-    values(constraint_idx_head) = - ((x0 - 1.0) * (x0 - 1.0) + (x1 - 1.0) * (x1 - 1.0) - 1.0);
+    values(constraint_idx_head) =
+        -((x0 - 1.0) * (x0 - 1.0) + (x1 - 1.0) * (x1 - 1.0) - 1.0);
     jacobian.coeffRef(0, 0) = -2.0 * (x(0) - 1.0);
     jacobian.coeffRef(0, 1) = -2.0 * (x(1) - 1.0);
   }
   size_t get_cdim() { return 1; }
 };
 
-
 int main() {
   Eigen::VectorXd lb = Eigen::VectorXd::Constant(2, -3.0);
   Eigen::VectorXd ub = Eigen::VectorXd::Constant(2, 3.0);
 
-
-  std::shared_ptr<ConstraintInterface> box = std::make_shared<BoxConstraint>(lb, ub);
+  std::shared_ptr<ConstraintInterface> box =
+      std::make_shared<BoxConstraint>(lb, ub);
   std::shared_ptr<ConstraintInterface> eq = std::make_shared<MyEqConst>();
   std::shared_ptr<ConstraintInterface> ineq = std::make_shared<MyIneqConst>();
   std::vector<std::shared_ptr<ConstraintInterface>> constraints{ineq, eq};
