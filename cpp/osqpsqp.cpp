@@ -153,13 +153,15 @@ NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
 }
 
 void NLPSolver::solve(const Eigen::VectorXd &x0) {
-  Eigen::VectorXd x = x0;
+  solution_ = x0;
   double cost_prev = std::numeric_limits<double>::infinity();
   for (size_t i = 0; i < option_.max_iter; i++) {
     std::cout << "iteration: " << i << std::endl;
-    bool is_feasible = cstset_->evaluate_full(
-        x, cstset_values_, cstset_jacobian_, cstset_lower_, cstset_upper_);
-    double cost = (0.5 * x.transpose() * P_ * x + q_.transpose() * x)(0);
+    bool is_feasible =
+        cstset_->evaluate_full(solution_, cstset_values_, cstset_jacobian_,
+                               cstset_lower_, cstset_upper_);
+    double cost = (0.5 * solution_.transpose() * P_ * solution_ +
+                   q_.transpose() * solution_)(0);
     double cost_diff = cost - cost_prev;
     bool ftol_satisfied =
         cost_diff <
@@ -169,7 +171,7 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
     }
     cost_prev = cost;
 
-    Eigen::VectorXd cost_grad = P_ * x + q_;
+    Eigen::VectorXd cost_grad = P_ * solution_ + q_;
 
     osqp::OsqpInstance instance;
     instance.objective_matrix = P_;
@@ -189,12 +191,12 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
     const auto osqp_exit_code = solver.Solve();
     Eigen::Map<const Eigen::VectorXd> primal_solution =
         solver.primal_solution();
-    x = primal_solution;
+    solution_ = primal_solution;
     // TODO: do we need to update the dual solution?
     // Eigen::Map<const Eigen::VectorXd> dual_solution =
     // solver.dual_solution();
   }
-  std::cout << x << std::endl;
+  // std::cout << solution_ << std::endl;
 }
 
 } // namespace osqpsqp

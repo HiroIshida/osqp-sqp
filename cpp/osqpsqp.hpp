@@ -119,6 +119,7 @@ public:
   Eigen::VectorXd cstset_values_;
   SMatrix cstset_jacobian_;
   NLPSolverOption option_;
+  Eigen::VectorXd solution_;
 };
 
 } // namespace osqpsqp
