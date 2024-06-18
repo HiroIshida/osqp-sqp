@@ -34,8 +34,8 @@ public:
 };
 
 int main() {
-  Eigen::VectorXd lb = Eigen::VectorXd::Constant(1, 1);
-  Eigen::VectorXd ub = Eigen::VectorXd::Constant(3.0, 3.0);
+  Eigen::VectorXd lb = Eigen::VectorXd::Constant(2, 1);
+  Eigen::VectorXd ub = Eigen::VectorXd::Constant(2, 3.0);
 
   auto cstset = std::make_shared<ConstraintSet>();
   cstset->add(std::make_shared<BoxConstraint>(lb, ub));
