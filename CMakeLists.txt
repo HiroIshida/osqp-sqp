@@ -14,6 +14,10 @@ include_directories(cpp)
 add_executable(main main.cpp)
 target_link_libraries(main osqpsqp)
 
+include_directories(cpp)
+add_executable(example example/double_integrator.cpp)
+target_link_libraries(example osqpsqp)
+
 find_package(GTest REQUIRED)
 function(setup_test test_name test_src)
     add_executable(${test_name} ${test_src})
