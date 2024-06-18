@@ -3,7 +3,8 @@
 
 namespace osqpsqp {
 
-bool ConstraintBase::check_jacobian(const Eigen::VectorXd &x, double eps) {
+bool ConstraintBase::check_jacobian(const Eigen::VectorXd &x, double eps,
+                                    bool verbose) {
   SMatrix ana_jac = SMatrix(get_cdim(), nx_);
   Eigen::MatrixXd num_jac = SMatrix(get_cdim(), nx_);
   ana_jac.setZero();
@@ -30,7 +31,14 @@ bool ConstraintBase::check_jacobian(const Eigen::VectorXd &x, double eps) {
 
   double max_diff = (num_jac - ana_jac.toDense()).cwiseAbs().maxCoeff();
   double check_eps = eps * 10;
-  return max_diff < check_eps;
+  bool ok = max_diff < check_eps;
+  if (verbose && !ok) {
+    std::cout << "max_diff: " << max_diff << std::endl;
+    std::cout << "check_eps: " << check_eps << std::endl;
+    std::cout << "num_jac: " << std::endl << num_jac << std::endl;
+    std::cout << "ana_jac: " << std::endl << ana_jac.toDense() << std::endl;
+  }
+  return ok;
 }
 
 bool EqualityConstraintBase::evaluate_full(const Eigen::VectorXd &x,

@@ -20,11 +20,12 @@ struct ConstraintBase {
                              size_t constraint_idx_head) = 0;
   virtual size_t get_cdim() = 0;
 
-  bool check_jacobian(const Eigen::VectorXd &x, double eps);
-  bool check_jacobian(double eps, size_t n_trial = 5) {
+  bool check_jacobian(const Eigen::VectorXd &x, double eps,
+                      bool verbose = false);
+  bool check_jacobian(double eps, bool verbose = false, size_t n_trial = 1) {
     bool result = true;
     for (size_t i = 0; i < n_trial; i++) {
-      bool partial = check_jacobian(Eigen::VectorXd::Random(nx_), eps);
+      bool partial = check_jacobian(Eigen::VectorXd::Random(nx_), eps, verbose);
       result = result && partial;
     }
     return result;
