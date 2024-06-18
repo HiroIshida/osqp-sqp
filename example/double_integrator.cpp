@@ -119,7 +119,8 @@ public:
   };
 
   CollisionConstraint(size_t T, double dt) : InequalityConstraintBase(6 * T, "collision", 1e-4, true), T_(T) {
-    obstacles_.push_back(Circle{Eigen::Vector2d(0.5, 0.5), 0.01});
+    obstacles_.push_back(Circle{Eigen::Vector2d(0.25, 0.4), 0.2});
+    obstacles_.push_back(Circle{Eigen::Vector2d(0.75, 0.7), 0.15});
   }
 
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
@@ -153,8 +154,8 @@ public:
 };
 
 int main() {
-  size_t T = 80;
-  double dt = 0.1;
+  size_t T = 120;
+  double dt = 0.2;
   Eigen::Vector2d start(0.1, 0.1);
   Eigen::Vector2d goal(0.9, 0.95);  // make asymmetric
 
@@ -208,7 +209,7 @@ int main() {
   }
 
   auto option = NLPSolverOption();
-  option.max_iter = 100;
+  option.max_iter = 200;
   auto solver = NLPSolver(cstset->nx_, P, Eigen::VectorXd::Zero(cstset->nx_), cstset, option);
   solver.solve(x0);
 
