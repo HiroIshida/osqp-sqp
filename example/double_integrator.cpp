@@ -1,5 +1,6 @@
 #include "osqpsqp.hpp"
 #include <iostream>
+#include <fstream>
 
 using namespace osqpsqp;
 
@@ -118,7 +119,7 @@ public:
   };
 
   CollisionConstraint(size_t T, double dt) : InequalityConstraintBase(6 * T, "collision", 1e-4, true), T_(T) {
-    obstacles_.push_back(Circle{Eigen::Vector2d(0.5, 0.5), 0.35});
+    obstacles_.push_back(Circle{Eigen::Vector2d(0.5, 0.5), 0.01});
   }
 
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
@@ -139,6 +140,7 @@ public:
       values(c_head) = min_dist;
       auto diff = x_now - obstacles_[closest_obstacle_idx].center;
       jacobian.coeffRef(c_head, x_head) = diff(0) / diff.norm();
+      c_head += 1;
     }
   }
 
@@ -181,7 +183,7 @@ int main() {
     lb.segment(6 * i + 4, 2) = Eigen::Vector2d(-0.1, -0.1);
     ub.segment(6 * i + 4, 2) = Eigen::Vector2d(0.1, 0.1);
   }
-  auto box_con = std::make_shared<BoxConstraint>(lb, ub);
+  auto box_con = std::make_shared<BoxConstraint>(lb, ub, 1e-4, true);
 
   auto cstset = std::make_shared<ConstraintSet>();
   cstset->add(diff_con);
@@ -208,4 +210,11 @@ int main() {
   option.max_iter = 100;
   auto solver = NLPSolver(cstset->nx_, P, Eigen::VectorXd::Zero(cstset->nx_), cstset, option);
   solver.solve(x0);
+
+  std::ofstream ofs("double_integrator.csv");
+  for(size_t i = 0; i < T; i++) {
+    for(size_t j = 0; j < 6; j++) {
+      ofs << solver.solution_(6 * i + j) << std::endl;
+    }
+  }
 }
