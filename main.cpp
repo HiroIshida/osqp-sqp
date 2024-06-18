@@ -3,8 +3,9 @@
 
 using namespace osqpsqp;
 
-class MyEqConst : public EqualityConstraintInterface {
+class MyEqConst : public EqualityConstraintBase {
 public:
+  using EqualityConstraintBase::EqualityConstraintBase;
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) {
     auto head = constraint_idx_head;
@@ -17,8 +18,9 @@ public:
   size_t get_cdim() { return 1; }
 };
 
-class MyIneqConst : public InequalityConstraintInterface {
+class MyIneqConst : public InequalityConstraintBase {
 public:
+  using InequalityConstraintBase::InequalityConstraintBase;
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) {
     double x0 = x(0);
@@ -37,8 +39,8 @@ int main() {
 
   auto cstset = std::make_shared<ConstraintSet>();
   cstset->add(std::make_shared<BoxConstraint>(lb, ub));
-  cstset->add(std::make_shared<MyIneqConst>());
-  cstset->add(std::make_shared<MyEqConst>());
+  cstset->add(std::make_shared<MyIneqConst>(2));
+  cstset->add(std::make_shared<MyEqConst>(2));
   SMatrix P(2, 2);
   P.coeffRef(0, 0) = 1.0;
   P.coeffRef(1, 1) = 1.0;

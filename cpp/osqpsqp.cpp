@@ -17,7 +17,7 @@ bool EqualityConstraintBase::evaluate_full(const Eigen::VectorXd &x,
   upper.segment(constraint_idx_head, get_cdim()) = tmp;
 
   double max_error = value_sliced.array().abs().maxCoeff();
-  bool is_feasible = max_error < tol;
+  bool is_feasible = max_error < tol_;
   return is_feasible;
 }
 
@@ -35,7 +35,7 @@ bool InequalityConstraintBase::evaluate_full(const Eigen::VectorXd &x,
   upper.segment(constraint_idx_head, get_cdim()) = Eigen::VectorXd::Constant(
       get_cdim(), std::numeric_limits<double>::infinity());
 
-  bool is_feasible = (value_sliced.array() > -tol).all();
+  bool is_feasible = (value_sliced.array() > -tol_).all();
   return is_feasible;
 }
 
@@ -56,8 +56,8 @@ bool BoxConstraint::evaluate_full(const Eigen::VectorXd &x,
   lower.segment(constraint_idx_head, get_cdim()) = lb_;
   upper.segment(constraint_idx_head, get_cdim()) = ub_;
   auto value_sliced = values.segment(constraint_idx_head, get_cdim());
-  bool is_feasible = (value_sliced.array() >= lb_.array() - tol).all() &&
-                     (value_sliced.array() <= ub_.array() + tol).all();
+  bool is_feasible = (value_sliced.array() >= lb_.array() - tol_).all() &&
+                     (value_sliced.array() <= ub_.array() + tol_).all();
   return is_feasible;
 }
 

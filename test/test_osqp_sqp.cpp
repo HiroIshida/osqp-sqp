@@ -6,6 +6,7 @@ using namespace osqpsqp;
 
 class EqDummy : public EqualityConstraintBase {
 public:
+  using EqualityConstraintBase::EqualityConstraintBase;
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) {
     auto head = constraint_idx_head;
@@ -21,6 +22,7 @@ public:
 
 class IneqDummy : public InequalityConstraintBase {
 public:
+  using InequalityConstraintBase::InequalityConstraintBase;
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) {
     auto head = constraint_idx_head;
@@ -39,8 +41,8 @@ TEST(ConstraintSet, SQPTest) {
   Eigen::VectorXd ub = Eigen::VectorXd::Constant(2, 3.0);
   auto cstset = ConstraintSet();
   cstset.add(std::make_shared<BoxConstraint>(lb, ub));
-  cstset.add(std::make_shared<EqDummy>());
-  cstset.add(std::make_shared<IneqDummy>());
+  cstset.add(std::make_shared<EqDummy>(2));
+  cstset.add(std::make_shared<IneqDummy>(2));
 
   Eigen::VectorXd x = Eigen::VectorXd::Constant(2, 1.0);
   Eigen::VectorXd values = Eigen::VectorXd::Constant(cstset.get_cdim(), 0.0);
