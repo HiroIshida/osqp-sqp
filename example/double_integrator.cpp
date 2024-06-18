@@ -65,42 +65,71 @@ class DifferentialConstraint : public EqualityConstraintBase {
   double dt_;
 };
 
-class GoalConstraint : public EqualityConstraintBase {
+class EndPointsConstraint : public EqualityConstraintBase {
   public:
-  GoalConstraint(size_t T, const Eigen::Vector2d &goal)
-      : EqualityConstraintBase(6 * T), T_(T), goal_(goal) {}
+  EndPointsConstraint(size_t T, 
+      const Eigen::Vector2d &start,
+      const Eigen::Vector2d &goal)
+      : EqualityConstraintBase(6 * T), T_(T), start_(start), goal_(goal) {}
 
   size_t get_cdim() override {
-    return 4;
+    return 8;
   }
 
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) override {
-    // fill values
+    // fill values (start)
     size_t c_head = constraint_idx_head;
-    size_t x_head = (T_ - 1) * 6;
+    size_t x_head = 0;
+    values.segment(c_head, 2) = x.segment(x_head, 2) - start_;
+    values.segment(c_head + 2, 2) = x.segment(x_head + 2, 2);
+
+    // fill values (goal)
+    c_head += 4;
+    x_head = (T_ - 1) * 6;
     values.segment(c_head, 2) = x.segment(x_head, 2) - goal_;
     values.segment(c_head + 2, 2) = x.segment(x_head + 2, 2);
 
-    // fill jacobian matrix
+    // fill jacobian matrix (start)
     size_t i_head = constraint_idx_head;
-    size_t j_head = 6 * (T_ - 1);
+    size_t j_head = 0;
+    add_identity_to_sparse_jacobian(jacobian, i_head, j_head, 2, 1.0);
+    add_identity_to_sparse_jacobian(jacobian, i_head + 2, j_head + 2, 2, 1.0);
+
+    // fill jacobian matrix (goal)
+    i_head += 4;
+    j_head = 6 * (T_ - 1);
     add_identity_to_sparse_jacobian(jacobian, i_head, j_head, 2, 1.0);
     add_identity_to_sparse_jacobian(jacobian, i_head + 2, j_head + 2, 2, 1.0);
   }
 
   private:
   size_t T_;
+  Eigen::VectorXd start_;
   Eigen::VectorXd goal_;
 };
 
 int main() {
-  auto diff_con = std::make_shared<DifferentialConstraint>(3, 0.1);
+  size_t T = 60;
+  auto diff_con = std::make_shared<DifferentialConstraint>(T, 0.1);
   if(!diff_con->check_jacobian(1e-6, true)) {
     std::cout << "Jacobian is wrong" << std::endl;
   }
-  auto goal_con = std::make_shared<GoalConstraint>(3, Eigen::Vector2d(0.9, 0.9));
+  auto goal_con = std::make_shared<EndPointsConstraint>(T, Eigen::Vector2d(0.1, 0.1), Eigen::Vector2d(0.5, 0.5));
   if(!goal_con->check_jacobian(1e-6, true)) {
     std::cout << "Jacobian is wrong" << std::endl;
   }
+  auto cstset = std::make_shared<ConstraintSet>();
+  cstset->add(diff_con);
+  cstset->add(goal_con);
+
+  // prepare quadratic cost \sum_{i \in T} u_i^2
+  SMatrix P(cstset->nx_, cstset->nx_);
+  for(size_t i = 0; i < T; i++) {
+    P.coeffRef(6 * i + 4, 6 * i + 4) = 1.0;
+    P.coeffRef(6 * i + 5, 6 * i + 5) = 1.0;
+  }
+  auto solver = NLPSolver(cstset->nx_, P, Eigen::VectorXd::Zero(cstset->nx_), cstset);
+  Eigen::VectorXd x0 = Eigen::VectorXd::Zero(cstset->nx_);
+  solver.solve(x0);
 }
