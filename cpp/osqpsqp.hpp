@@ -10,7 +10,9 @@ namespace osqpsqp {
 using SMatrix = Eigen::SparseMatrix<double, Eigen::ColMajor>;
 
 struct ConstraintBase {
-  ConstraintBase(size_t nx, double tol = 1e-6) : tol_(tol), nx_(nx) {}
+  ConstraintBase(size_t nx, const std::string &name = "<not-set>",
+                 double tol = 1e-6, bool verbose = false)
+      : name_(name), tol_(tol), nx_(nx), verbose_(verbose) {}
   virtual void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                         SMatrix &jacobian, size_t constraint_idx_head) = 0;
 
@@ -32,8 +34,10 @@ struct ConstraintBase {
   }
 
   virtual ~ConstraintBase() {}
+  std::string name_;
   size_t nx_;
   double tol_;
+  bool verbose_;
 };
 
 struct EqualityConstraintBase : public ConstraintBase {
@@ -56,7 +60,7 @@ class BoxConstraint : public ConstraintBase {
 public:
   BoxConstraint(const Eigen::VectorXd &lb, const Eigen::VectorXd &ub,
                 double tol = 1e-6)
-      : ConstraintBase(lb.size(), tol), lb_(lb), ub_(ub) {}
+      : ConstraintBase(lb.size(), "box", tol), lb_(lb), ub_(ub) {}
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) override;
   bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,

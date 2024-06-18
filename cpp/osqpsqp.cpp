@@ -1,5 +1,7 @@
 #include "osqpsqp.hpp"
 #include <osqp++.h>
+#include <sstream>
+#include <string>
 
 namespace osqpsqp {
 
@@ -56,6 +58,11 @@ bool EqualityConstraintBase::evaluate_full(const Eigen::VectorXd &x,
 
   double max_error = value_sliced.array().abs().maxCoeff();
   bool is_feasible = max_error < tol_;
+  if (verbose_) {
+    std::stringstream ss;
+    ss << "eqconst(" << name_ << ") feasiblity: " << is_feasible;
+    std::cout << ss.str() << std::endl;
+  }
   return is_feasible;
 }
 
@@ -74,6 +81,11 @@ bool InequalityConstraintBase::evaluate_full(const Eigen::VectorXd &x,
       get_cdim(), std::numeric_limits<double>::infinity());
 
   bool is_feasible = (value_sliced.array() > -tol_).all();
+  if (verbose_) {
+    std::stringstream ss;
+    ss << "ineqconst(" << name_ << ") feasiblity: " << is_feasible;
+    std::cout << ss.str() << std::endl;
+  }
   return is_feasible;
 }
 
@@ -96,6 +108,9 @@ bool BoxConstraint::evaluate_full(const Eigen::VectorXd &x,
   auto value_sliced = values.segment(constraint_idx_head, get_cdim());
   bool is_feasible = (value_sliced.array() >= lb_.array() - tol_).all() &&
                      (value_sliced.array() <= ub_.array() + tol_).all();
+  if (verbose_) {
+    std::cout << "box feasiblity: " << is_feasible << std::endl;
+  }
   return is_feasible;
 }
 
@@ -141,6 +156,7 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
   Eigen::VectorXd x = x0;
   double cost_prev = std::numeric_limits<double>::infinity();
   for (size_t i = 0; i < option_.max_iter; i++) {
+    std::cout << "iteration: " << i << std::endl;
     bool is_feasible = cstset_->evaluate_full(
         x, cstset_values_, cstset_jacobian_, cstset_lower_, cstset_upper_);
     double cost = (0.5 * x.transpose() * P_ * x + q_.transpose() * x)(0);
@@ -177,8 +193,8 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
     // TODO: do we need to update the dual solution?
     // Eigen::Map<const Eigen::VectorXd> dual_solution =
     // solver.dual_solution();
-    std::cout << x << std::endl;
   }
+  std::cout << x << std::endl;
 }
 
 } // namespace osqpsqp
