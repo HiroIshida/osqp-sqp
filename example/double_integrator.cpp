@@ -140,6 +140,7 @@ public:
       values(c_head) = min_dist;
       auto diff = x_now - obstacles_[closest_obstacle_idx].center;
       jacobian.coeffRef(c_head, x_head) = diff(0) / diff.norm();
+      jacobian.coeffRef(c_head, x_head + 1) = diff(1) / diff.norm();
       c_head += 1;
     }
   }
