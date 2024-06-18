@@ -11,7 +11,7 @@ void add_identity_to_sparse_jacobian(
   }
 }
 
-class DifferentialConstraint : public EqualityConstraintInterface {
+class DifferentialConstraint : public EqualityConstraintBase {
   public:
   DifferentialConstraint(size_t T, double dt) : T_(T), dt_(dt) {}
 
@@ -66,7 +66,7 @@ class DifferentialConstraint : public EqualityConstraintInterface {
   double dt_;
 };
 
-class GoalConstraint : public EqualityConstraintInterface {
+class GoalConstraint : public EqualityConstraintBase {
   public:
   GoalConstraint(size_t T, const Eigen::Vector2d &goal)
       : T_(T), goal_(goal) {}

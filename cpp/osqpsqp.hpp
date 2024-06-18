@@ -7,7 +7,7 @@ namespace osqpsqp {
 
 using SMatrix = Eigen::SparseMatrix<double, Eigen::ColMajor>;
 
-struct ConstraintInterface {
+struct ConstraintBase {
   virtual void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                         SMatrix &jacobian, size_t constraint_idx_head) = 0;
 
@@ -16,25 +16,25 @@ struct ConstraintInterface {
                              Eigen::VectorXd &upper,
                              size_t constraint_idx_head) = 0;
   virtual size_t get_cdim() = 0;
-  virtual ~ConstraintInterface() {}
+  virtual ~ConstraintBase() {}
   double tol = 1e-6;
 };
 
-struct EqualityConstraintInterface : public ConstraintInterface {
+struct EqualityConstraintBase : public ConstraintBase {
   bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
                      Eigen::VectorXd &upper,
                      size_t constraint_idx_head) override;
 };
 
-struct InequalityConstraintInterface : public ConstraintInterface {
+struct InequalityConstraintBase : public ConstraintBase {
   bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
                      Eigen::VectorXd &upper,
                      size_t constraint_idx_head) override;
 };
 
-class BoxConstraint : public ConstraintInterface {
+class BoxConstraint : public ConstraintBase {
 public:
   BoxConstraint(const Eigen::VectorXd &lb, const Eigen::VectorXd &ub)
       : lb_(lb), ub_(ub) {}
@@ -52,11 +52,9 @@ public:
 class ConstraintSet {
 public:
   ConstraintSet()
-      : constraints_(std::vector<std::shared_ptr<ConstraintInterface>>()) {}
+      : constraints_(std::vector<std::shared_ptr<ConstraintBase>>()) {}
 
-  void add(std::shared_ptr<ConstraintInterface> c) {
-    constraints_.push_back(c);
-  }
+  void add(std::shared_ptr<ConstraintBase> c) { constraints_.push_back(c); }
 
   bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                      SMatrix &jacobian, Eigen::VectorXd &lower,
@@ -64,7 +62,7 @@ public:
 
   size_t get_cdim();
 
-  std::vector<std::shared_ptr<ConstraintInterface>> constraints_;
+  std::vector<std::shared_ptr<ConstraintBase>> constraints_;
 };
 
 struct NLPSolverOption {

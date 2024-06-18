@@ -4,7 +4,7 @@
 
 using namespace osqpsqp;
 
-class EqDummy : public EqualityConstraintInterface {
+class EqDummy : public EqualityConstraintBase {
 public:
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) {
@@ -19,7 +19,7 @@ public:
   size_t get_cdim() { return 2; }
 };
 
-class IneqDummy : public InequalityConstraintInterface {
+class IneqDummy : public InequalityConstraintBase {
 public:
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) {

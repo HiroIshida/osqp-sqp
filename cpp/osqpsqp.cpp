@@ -3,12 +3,12 @@
 
 namespace osqpsqp {
 
-bool EqualityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
-                                                Eigen::VectorXd &values,
-                                                SMatrix &jacobian,
-                                                Eigen::VectorXd &lower,
-                                                Eigen::VectorXd &upper,
-                                                size_t constraint_idx_head) {
+bool EqualityConstraintBase::evaluate_full(const Eigen::VectorXd &x,
+                                           Eigen::VectorXd &values,
+                                           SMatrix &jacobian,
+                                           Eigen::VectorXd &lower,
+                                           Eigen::VectorXd &upper,
+                                           size_t constraint_idx_head) {
   evaluate(x, values, jacobian, constraint_idx_head);
   auto jac_sliced = jacobian.middleRows(constraint_idx_head, get_cdim());
   auto value_sliced = values.segment(constraint_idx_head, get_cdim());
@@ -21,12 +21,12 @@ bool EqualityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
   return is_feasible;
 }
 
-bool InequalityConstraintInterface::evaluate_full(const Eigen::VectorXd &x,
-                                                  Eigen::VectorXd &values,
-                                                  SMatrix &jacobian,
-                                                  Eigen::VectorXd &lower,
-                                                  Eigen::VectorXd &upper,
-                                                  size_t constraint_idx_head) {
+bool InequalityConstraintBase::evaluate_full(const Eigen::VectorXd &x,
+                                             Eigen::VectorXd &values,
+                                             SMatrix &jacobian,
+                                             Eigen::VectorXd &lower,
+                                             Eigen::VectorXd &upper,
+                                             size_t constraint_idx_head) {
   evaluate(x, values, jacobian, constraint_idx_head);
   auto jac_sliced = jacobian.middleRows(constraint_idx_head, get_cdim());
   auto value_sliced = values.segment(constraint_idx_head, get_cdim());
