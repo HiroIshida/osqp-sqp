@@ -10,12 +10,12 @@ public:
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) {
     auto head = constraint_idx_head;
-    values(head) = x(0) + x(0) * x(1);
-    values(head + 1) = x(1) + x(0) * x(1);
-    jacobian.coeffRef(head, 0) = 1.0 + x(1);
+    values(head) = x(0) * x(0) + x(0) * x(1);
+    values(head + 1) = x(1) * x(1) + x(0) * x(1);
+    jacobian.coeffRef(head, 0) = 2 * x(0) + x(1);
     jacobian.coeffRef(head, 1) = x(0);
     jacobian.coeffRef(head + 1, 0) = x(1);
-    jacobian.coeffRef(head + 1, 1) = 1.0 + x(0);
+    jacobian.coeffRef(head + 1, 1) = 2 * x(1) + x(0);
   }
   size_t get_cdim() { return 2; }
 };
@@ -44,6 +44,11 @@ TEST(ConstraintSet, SQPTest) {
   cstset.add(std::make_shared<EqDummy>(2));
   cstset.add(std::make_shared<IneqDummy>(2));
 
+  // test jacobian
+  for(auto c : cstset.constraints_){
+    EXPECT_TRUE(c->check_jacobian(1e-6));
+  }
+
   Eigen::VectorXd x = Eigen::VectorXd::Constant(2, 1.0);
   Eigen::VectorXd values = Eigen::VectorXd::Constant(cstset.get_cdim(), 0.0);
   SMatrix jacobian = SMatrix(cstset.get_cdim(), 2);
@@ -55,8 +60,8 @@ TEST(ConstraintSet, SQPTest) {
   Eigen::MatrixXd jacobian_expected = Eigen::MatrixXd::Zero(cstset.get_cdim(), 2);
   jacobian_expected << 1.0, 0.0,
                        0.0, 1.0,
-                       1.0 + x(1), x(0),
-                       x(1), 1.0 + x(0),
+                       2 * x(0) + x(1), x(0),
+                       x(1), 2 * x(1) + x(0),
                        1.0 + x(1), x(0),
                        x(1), 1.0 + x(0);
   double max_error = (jacobian.toDense() - jacobian_expected).cwiseAbs().maxCoeff();
@@ -72,8 +77,8 @@ TEST(ConstraintSet, SQPTest) {
   Eigen::VectorXd lower_expected = Eigen::VectorXd::Zero(cstset.get_cdim());
   lower_expected << 1.,
                  1.,
-                 1.0 + x(1) + x(0) - (x(0) + x(0) * x(1)),
-                 1.0 + x(0) + x(1) - (x(1) + x(0) * x(1)),
+                 3 * x(0) + x(1) - (x(0) * x(0) + x(0) * x(1)),
+                 3 * x(1) + x(0) - (x(1) * x(1) + x(0) * x(1)),
                  1.0 + x(1) + x(0) - (x(0) + x(0) * x(1)),
                  1.0 + x(0) + x(1) - (x(1) + x(0) * x(1));
   max_error = (lower - lower_expected).cwiseAbs().maxCoeff();
@@ -83,8 +88,8 @@ TEST(ConstraintSet, SQPTest) {
   Eigen::VectorXd upper_expected = Eigen::VectorXd::Zero(cstset.get_cdim());
   upper_expected << 3.,
                  3.,
-                 1.0 + x(1) + x(0) - (x(0) + x(0) * x(1)),
-                 1.0 + x(0) + x(1) - (x(1) + x(0) * x(1)),
+                 3 * x(0) + x(1) - (x(0) * x(0) + x(0) * x(1)),
+                 3 * x(1) + x(0) - (x(1) * x(1) + x(0) * x(1)),
                  std::numeric_limits<double>::infinity(),
                  std::numeric_limits<double>::infinity();
   max_error = (upper.head(4) - upper_expected.head(4)).cwiseAbs().maxCoeff();

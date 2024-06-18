@@ -3,6 +3,36 @@
 
 namespace osqpsqp {
 
+bool ConstraintBase::check_jacobian(const Eigen::VectorXd &x, double eps) {
+  SMatrix ana_jac = SMatrix(get_cdim(), nx_);
+  Eigen::MatrixXd num_jac = SMatrix(get_cdim(), nx_);
+  ana_jac.setZero();
+  num_jac.setZero();
+
+  { // numerical differentiation
+    SMatrix whatever = SMatrix(get_cdim(), nx_);
+    Eigen::VectorXd f0 = Eigen::VectorXd::Zero(get_cdim());
+    evaluate(x, f0, whatever, 0);
+
+    for (size_t i = 0; i < nx_; i++) {
+      Eigen::VectorXd x_plus = x;
+      x_plus(i) += eps;
+      Eigen::VectorXd f1 = Eigen::VectorXd::Zero(get_cdim());
+      evaluate(x_plus, f1, whatever, 0);
+      num_jac.col(i) = (f1 - f0) * (1 / eps);
+    }
+  }
+
+  { // analytical differentiation
+    Eigen::VectorXd whatever = Eigen::VectorXd::Zero(get_cdim());
+    evaluate(x, whatever, ana_jac, 0);
+  }
+
+  double max_diff = (num_jac - ana_jac.toDense()).cwiseAbs().maxCoeff();
+  double check_eps = eps * 10;
+  return max_diff < check_eps;
+}
+
 bool EqualityConstraintBase::evaluate_full(const Eigen::VectorXd &x,
                                            Eigen::VectorXd &values,
                                            SMatrix &jacobian,
