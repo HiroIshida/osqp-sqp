@@ -153,10 +153,17 @@ NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
 }
 
 void NLPSolver::solve(const Eigen::VectorXd &x0) {
+  osqp::OsqpSettings settings;
+  settings.verbose = option_.osqp_verbose;
+  if (option_.osqp_force_deterministic) {
+    settings.adaptive_rho_interval = 25.0;
+  }
+
   solution_ = x0;
   double cost_prev = std::numeric_limits<double>::infinity();
-  for (size_t i = 0; i < option_.max_iter; i++) {
-    std::cout << "iteration: " << i << std::endl;
+
+  for (size_t iter = 0; iter < option_.max_iter; iter++) {
+    std::cout << "iteration: " << iter << std::endl;
     bool is_feasible =
         cstset_->evaluate_full(solution_, cstset_values_, cstset_jacobian_,
                                cstset_lower_, cstset_upper_);
@@ -181,14 +188,36 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
     instance.upper_bounds = cstset_upper_;
 
     osqp::OsqpSolver solver;
-    osqp::OsqpSettings settings;
-    settings.verbose = option_.osqp_verbose;
-    if (option_.osqp_force_deterministic) {
-      settings.adaptive_rho_interval = 25.0;
+
+    if (iter == 0) {
+      for (size_t qp_relax_iter = 0; qp_relax_iter < option_.max_relax_iter;
+           qp_relax_iter++) {
+        if (qp_relax_iter > 0) {
+          instance.lower_bounds -= Eigen::VectorXd::Constant(
+              cstset_->get_cdim(), option_.relaxation);
+          instance.upper_bounds += Eigen::VectorXd::Constant(
+              cstset_->get_cdim(), option_.relaxation);
+          std::cout << "relax!" << std::endl;
+        }
+        const auto init_status = solver.Init(instance, settings);
+        const auto osqp_exit_code = solver.Solve();
+        if (osqp_exit_code == osqp::OsqpExitCode::kOptimal) {
+          break;
+        }
+        if (qp_relax_iter == option_.max_relax_iter - 1) {
+          throw std::runtime_error("OSQP failed to solve the problem.");
+        }
+      }
+    } else {
+      const auto init_status = solver.Init(instance, settings);
+      const auto osqp_exit_code = solver.Solve();
+      if (osqp_exit_code != osqp::OsqpExitCode::kOptimal) {
+        // throw std::runtime_error("OSQP failed to solve the problem.");
+        std::cout << "failed to solve" << std::endl;
+        return;
+      }
     }
 
-    const auto init_status = solver.Init(instance, settings);
-    const auto osqp_exit_code = solver.Solve();
     Eigen::Map<const Eigen::VectorXd> primal_solution =
         solver.primal_solution();
     solution_ = primal_solution;

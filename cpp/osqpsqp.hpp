@@ -102,6 +102,9 @@ struct NLPSolverOption {
   std::optional<double> ftol = 1e-3;
   bool osqp_verbose = false;
   bool osqp_force_deterministic = false;
+  bool recover_qp_by_inflation = true;
+  double relaxation = 0.05;
+  size_t max_relax_iter = 10;
 };
 
 class NLPSolver {
