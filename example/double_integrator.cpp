@@ -16,7 +16,7 @@ void add_identity_to_sparse_jacobian(
 class DifferentialConstraint : public EqualityConstraintBase {
   public:
   DifferentialConstraint(size_t T, double dt) : 
-    EqualityConstraintBase(6 * T, "diff", 1e-6, true), T_(T), dt_(dt) {}
+    EqualityConstraintBase(6 * T, "diff", 1e-4, true), T_(T), dt_(dt) {}
 
   size_t get_cdim() override {
     return 4 * (T_ - 1);
@@ -70,7 +70,7 @@ class EndPointsConstraint : public EqualityConstraintBase {
   EndPointsConstraint(size_t T, 
       const Eigen::Vector2d &start,
       const Eigen::Vector2d &goal)
-      : EqualityConstraintBase(6 * T, "end-point", 1e-6, true), T_(T), start_(start), goal_(goal) {}
+      : EqualityConstraintBase(6 * T, "end-point", 1e-2, true), T_(T), start_(start), goal_(goal) {}
 
   size_t get_cdim() override {
     return 8;
@@ -109,19 +109,85 @@ class EndPointsConstraint : public EqualityConstraintBase {
   Eigen::VectorXd goal_;
 };
 
+
+class CollisionConstraint : public InequalityConstraintBase { 
+public:
+  struct Circle {
+    Eigen::Vector2d center;
+    double radius;
+  };
+
+  CollisionConstraint(size_t T, double dt) : InequalityConstraintBase(6 * T, "collision", 1e-4, true), T_(T) {
+    obstacles_.push_back(Circle{Eigen::Vector2d(0.5, 0.5), 0.35});
+  }
+
+  void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
+                SMatrix &jacobian, size_t constraint_idx_head) override {
+    size_t c_head = constraint_idx_head;
+    for(size_t t = 0; t < T_; t++) {
+      size_t x_head = t * 6;
+      auto x_now = x.segment(x_head, 2);
+      size_t closest_obstacle_idx = 0;
+      double min_dist = std::numeric_limits<double>::max();
+      for(size_t i = 0; i < obstacles_.size(); i++) {
+        double dist = (x_now - obstacles_[i].center).norm() - obstacles_[i].radius;
+        if(dist < min_dist) {
+          min_dist = dist;
+          closest_obstacle_idx = i;
+        }
+      }
+      values(c_head) = min_dist;
+      auto diff = x_now - obstacles_[closest_obstacle_idx].center;
+      jacobian.coeffRef(c_head, x_head) = diff(0) / diff.norm();
+    }
+  }
+
+  size_t get_cdim() override {
+    return 2 * T_ * obstacles_.size();
+  }
+  size_t T_;
+  std::vector<Circle> obstacles_;
+};
+
 int main() {
-  size_t T = 60;
-  auto diff_con = std::make_shared<DifferentialConstraint>(T, 0.1);
+  size_t T = 80;
+  double dt = 0.1;
+  Eigen::Vector2d start(0.1, 0.1);
+  Eigen::Vector2d goal(0.9, 0.95);  // make asymmetric
+
+  auto diff_con = std::make_shared<DifferentialConstraint>(T, dt);
   if(!diff_con->check_jacobian(1e-6, true)) {
-    std::cout << "Jacobian is wrong" << std::endl;
+    throw std::runtime_error("diff eq is wrong");
   }
-  auto goal_con = std::make_shared<EndPointsConstraint>(T, Eigen::Vector2d(0.1, 0.1), Eigen::Vector2d(0.5, 0.5));
+  auto goal_con = std::make_shared<EndPointsConstraint>(T, start, goal);
   if(!goal_con->check_jacobian(1e-6, true)) {
-    std::cout << "Jacobian is wrong" << std::endl;
+    throw std::runtime_error("end eq is wrong");
   }
+
+  auto collision_con = std::make_shared<CollisionConstraint>(T, dt);
+  if(!goal_con->check_jacobian(1e-6, true)) {
+    throw std::runtime_error("coll ineq is wrong");
+  }
+
+  // create box constraint
+  Eigen::VectorXd lb = Eigen::VectorXd::Zero(T * 6);
+  Eigen::VectorXd ub = Eigen::VectorXd::Zero(T * 6);
+  for(size_t i = 0; i < T; i++) {
+    // 0 < x < 1, -0.3 < v < 0.3, -0.1 < a < 0.1
+    lb.segment(6 * i, 2) = Eigen::Vector2d(0.0, 0.0);
+    ub.segment(6 * i, 2) = Eigen::Vector2d(1.0, 1.0);
+    lb.segment(6 * i + 2, 2) = Eigen::Vector2d(-0.3, -0.3);
+    ub.segment(6 * i + 2, 2) = Eigen::Vector2d(0.3, 0.3);
+    lb.segment(6 * i + 4, 2) = Eigen::Vector2d(-0.1, -0.1);
+    ub.segment(6 * i + 4, 2) = Eigen::Vector2d(0.1, 0.1);
+  }
+  auto box_con = std::make_shared<BoxConstraint>(lb, ub);
+
   auto cstset = std::make_shared<ConstraintSet>();
   cstset->add(diff_con);
   cstset->add(goal_con);
+  cstset->add(collision_con);
+  cstset->add(box_con);
 
   // prepare quadratic cost \sum_{i \in T} u_i^2
   SMatrix P(cstset->nx_, cstset->nx_);
@@ -129,7 +195,17 @@ int main() {
     P.coeffRef(6 * i + 4, 6 * i + 4) = 1.0;
     P.coeffRef(6 * i + 5, 6 * i + 5) = 1.0;
   }
-  auto solver = NLPSolver(cstset->nx_, P, Eigen::VectorXd::Zero(cstset->nx_), cstset);
+
+  // create straight-line initial guess
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(cstset->nx_);
+  auto diff_per_t = (goal - start) / (T - 1);
+  for(size_t i = 0; i < T; i++) {
+    x0.segment(6 * i, 2) = start + diff_per_t * i;
+    x0.segment(6 * i + 2, 2) = diff_per_t / dt;
+  }
+
+  auto option = NLPSolverOption();
+  option.max_iter = 100;
+  auto solver = NLPSolver(cstset->nx_, P, Eigen::VectorXd::Zero(cstset->nx_), cstset, option);
   solver.solve(x0);
 }
