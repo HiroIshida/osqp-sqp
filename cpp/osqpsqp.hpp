@@ -59,8 +59,8 @@ struct InequalityConstraintBase : public ConstraintBase {
 class BoxConstraint : public ConstraintBase {
 public:
   BoxConstraint(const Eigen::VectorXd &lb, const Eigen::VectorXd &ub,
-                double tol = 1e-6)
-      : ConstraintBase(lb.size(), "box", tol), lb_(lb), ub_(ub) {}
+                double tol = 1e-6, bool verbose = false)
+      : ConstraintBase(lb.size(), "box", tol, verbose), lb_(lb), ub_(ub) {}
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) override;
   bool evaluate_full(const Eigen::VectorXd &x, Eigen::VectorXd &values,
