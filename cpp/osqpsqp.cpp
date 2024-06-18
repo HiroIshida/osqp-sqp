@@ -1,4 +1,5 @@
 #include "osqpsqp.hpp"
+#include <chrono>
 #include <osqp++.h>
 #include <sstream>
 #include <string>
@@ -153,6 +154,8 @@ NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
 }
 
 void NLPSolver::solve(const Eigen::VectorXd &x0) {
+  auto start = std::chrono::high_resolution_clock::now();
+
   osqp::OsqpSettings settings;
   settings.verbose = option_.osqp_verbose;
   if (option_.osqp_force_deterministic) {
@@ -174,6 +177,11 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
         cost_diff <
         option_.ftol.value_or(std::numeric_limits<double>::infinity());
     if (is_feasible && ftol_satisfied) {
+      auto end = std::chrono::high_resolution_clock::now();
+      auto duration =
+          std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+      std::cout << "time: " << duration.count() << "ms" << std::endl;
+      std::cout << "solved!" << std::endl;
       break;
     }
     cost_prev = cost;
