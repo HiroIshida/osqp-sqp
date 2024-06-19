@@ -11,7 +11,7 @@ using SMatrix = Eigen::SparseMatrix<double, Eigen::ColMajor>;
 
 struct ConstraintBase {
   ConstraintBase(size_t nx, const std::string &name = "<not-set>",
-                 double tol = 1e-6, bool verbose = false)
+                 double tol = 1e-3, bool verbose = false)
       : name_(name), tol_(tol), nx_(nx), verbose_(verbose) {}
   virtual void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                         SMatrix &jacobian, size_t constraint_idx_head) = 0;
@@ -59,7 +59,7 @@ struct InequalityConstraintBase : public ConstraintBase {
 class BoxConstraint : public ConstraintBase {
 public:
   BoxConstraint(const Eigen::VectorXd &lb, const Eigen::VectorXd &ub,
-                double tol = 1e-6, bool verbose = false)
+                double tol = 1e-3, bool verbose = false)
       : ConstraintBase(lb.size(), "box", tol, verbose), lb_(lb), ub_(ub) {}
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values,
                 SMatrix &jacobian, size_t constraint_idx_head) override;
@@ -98,9 +98,17 @@ public:
 };
 
 struct NLPSolverOption {
+  // see: https://github.com/osqp/osqp/issues/158
+  // for osqp's eps setting. Specifically, if you set tol fo constraints or ftol
+  // of the solver smaller, you also need to set eps_abs and eps_rel smaller.
+  // see:
+  // https://osqp.discourse.group/t/what-settings-to-choose-to-ensure-reproducibility/64/4
+  // for osqp's deterministic setting
   size_t max_iter = 20;
   std::optional<double> ftol = 1e-3;
   bool osqp_verbose = false;
+  double osqp_eps_abs = 1e-3; // osqp's default
+  double osqp_eps_rel = 1e-3; // osqp's default
   bool osqp_force_deterministic = false;
   bool recover_qp_by_inflation = true;
   double relaxation = 0.05;

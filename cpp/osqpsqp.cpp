@@ -158,6 +158,8 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
 
   osqp::OsqpSettings settings;
   settings.verbose = option_.osqp_verbose;
+  settings.eps_abs = option_.osqp_eps_abs;
+  settings.eps_rel = option_.osqp_eps_rel;
   if (option_.osqp_force_deterministic) {
     settings.adaptive_rho_interval = 25.0;
   }
