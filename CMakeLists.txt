@@ -11,10 +11,6 @@ target_link_libraries(osqpsqp osqp-cpp)
 target_include_directories(osqpsqp PUBLIC osqp-cpp/include)
 
 include_directories(cpp)
-add_executable(main main.cpp)
-target_link_libraries(main osqpsqp)
-
-include_directories(cpp)
 add_executable(example example/double_integrator.cpp)
 target_link_libraries(example osqpsqp)
 
@@ -25,4 +21,5 @@ function(setup_test test_name test_src)
     target_include_directories(${test_name} PUBLIC ${GTEST_INCLUDE_DIRS})
 endfunction()
 setup_test(test_osqp_sqp test/test_osqp_sqp.cpp)
+setup_test(test_nlp_simple test/test_nlp_simple.cpp)
 enable_testing()
