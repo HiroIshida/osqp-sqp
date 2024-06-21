@@ -1,6 +1,7 @@
 #include "osqpsqp.hpp"
 #include <iostream>
 #include <fstream>
+#include <gtest/gtest.h>
 
 using namespace osqpsqp;
 
@@ -153,7 +154,7 @@ public:
   std::vector<Circle> obstacles_;
 };
 
-int main() {
+TEST(SOLVE_TRAJOPT, SQPTEST){
   size_t T = 120;
   double dt = 0.2;
   Eigen::Vector2d start(0.1, 0.1);
@@ -211,12 +212,18 @@ int main() {
   auto option = NLPSolverOption();
   option.max_iter = 200;
   auto solver = NLPSolver(cstset->nx_, P, Eigen::VectorXd::Zero(cstset->nx_), cstset, option);
-  solver.solve(x0);
+  auto ret = solver.solve(x0);
+  EXPECT_EQ(ret, NLPStatus::Success);
 
-  std::ofstream ofs("double_integrator.csv");
+  std::ofstream ofs("/tmp/osqp_sqp_cpp_test-double_integrator.csv");
   for(size_t i = 0; i < T; i++) {
     for(size_t j = 0; j < 6; j++) {
       ofs << solver.solution_(6 * i + j) << std::endl;
     }
   }
+}
+
+int main(int argc, char **argv) {
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
