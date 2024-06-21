@@ -130,6 +130,16 @@ public:
             const NLPSolverOption &option = NLPSolverOption());
   NLPStatus solve(const Eigen::VectorXd &x0);
 
+  static void set_zero_to_smatrix(SMatrix &smat) {
+    for (size_t k = 0; k < smat.outerSize(); ++k) {
+      for (Eigen::SparseMatrix<double, Eigen::ColMajor>::InnerIterator it(smat,
+                                                                          k);
+           it; ++it) {
+        it.valueRef() = 0;
+      }
+    }
+  }
+
   SMatrix P_;
   Eigen::VectorXd q_;
   std::shared_ptr<ConstraintSet> cstset_;

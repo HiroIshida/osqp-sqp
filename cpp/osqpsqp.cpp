@@ -149,12 +149,21 @@ NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
   cstset_values_ = Eigen::VectorXd(cstset->get_cdim());
   cstset_lower_ = Eigen::VectorXd(cstset->get_cdim());
   cstset_upper_ = Eigen::VectorXd(cstset->get_cdim());
+
+  // just to determine the sparse pattern of the jacobian
   cstset_->evaluate_full(x_dummy, cstset_values_, cstset_jacobian_,
                          cstset_lower_, cstset_upper_);
+  cstset_values_.setZero();
+  cstset_lower_.setZero();
+  cstset_upper_.setZero();
+  NLPSolver::set_zero_to_smatrix(cstset_jacobian_);
 }
 
 NLPStatus NLPSolver::solve(const Eigen::VectorXd &x0) {
   auto start = std::chrono::high_resolution_clock::now();
+
+  // do we need to reset the jacobian?
+  NLPSolver::set_zero_to_smatrix(cstset_jacobian_);
 
   osqp::OsqpSettings settings;
   settings.verbose = option_.osqp_verbose;
