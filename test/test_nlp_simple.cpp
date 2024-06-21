@@ -38,7 +38,7 @@ public:
 
 void test_solver_simple(bool with_box) {
   auto cstset = std::make_shared<ConstraintSet>();
-  if(with_box) {
+  if (with_box) {
     Eigen::VectorXd lb = Eigen::VectorXd::Constant(2, 1);
     Eigen::VectorXd ub = Eigen::VectorXd::Constant(2, 3.0);
     cstset->add(std::make_shared<BoxConstraint>(lb, ub, 1e-6));
@@ -56,7 +56,7 @@ void test_solver_simple(bool with_box) {
   auto solver = NLPSolver(2, P, Eigen::VectorXd::Zero(2), cstset, option);
   auto ret = solver.solve(Eigen::VectorXd::Zero(2));
   EXPECT_EQ(ret, NLPStatus::Success);
-  if(with_box) {
+  if (with_box) {
     EXPECT_NEAR(solver.solution_(0), 1.0, 1e-5);
     EXPECT_NEAR(solver.solution_(1), 1.0, 1e-5);
   } else {
