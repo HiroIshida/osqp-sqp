@@ -153,7 +153,7 @@ NLPSolver::NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
                          cstset_lower_, cstset_upper_);
 }
 
-void NLPSolver::solve(const Eigen::VectorXd &x0) {
+NLPStatus NLPSolver::solve(const Eigen::VectorXd &x0) {
   auto start = std::chrono::high_resolution_clock::now();
 
   osqp::OsqpSettings settings;
@@ -168,7 +168,9 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
   double cost_prev = std::numeric_limits<double>::infinity();
 
   for (size_t iter = 0; iter < option_.max_iter; iter++) {
-    std::cout << "iteration: " << iter << std::endl;
+    if (option_.verbose) {
+      std::cout << "iteration: " << iter << std::endl;
+    }
     bool is_feasible =
         cstset_->evaluate_full(solution_, cstset_values_, cstset_jacobian_,
                                cstset_lower_, cstset_upper_);
@@ -182,9 +184,12 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
       auto end = std::chrono::high_resolution_clock::now();
       auto duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-      std::cout << "time: " << duration.count() << "ms" << std::endl;
-      std::cout << "solved!" << std::endl;
-      break;
+      elapsed_time_ = duration.count();
+      if (option_.verbose) {
+        std::cout << "time: " << duration.count() << "ms" << std::endl;
+        std::cout << "solved!" << std::endl;
+      }
+      return NLPStatus::Success;
     }
     cost_prev = cost;
 
@@ -200,14 +205,20 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
     osqp::OsqpSolver solver;
 
     if (iter == 0) {
+      // currently we use relaxation only for the first outer iteration
+      // Here, relaxation refers to the relaxation of the bounds of the
+      // constraints. This is done to make the problem feasible for the first
+      // iteration.
       for (size_t qp_relax_iter = 0; qp_relax_iter < option_.max_relax_iter;
            qp_relax_iter++) {
         if (qp_relax_iter > 0) {
+          if (option_.verbose) {
+            std::cout << "recovering qp by constraint relaxation" << std::endl;
+          }
           instance.lower_bounds -= Eigen::VectorXd::Constant(
               cstset_->get_cdim(), option_.relaxation);
           instance.upper_bounds += Eigen::VectorXd::Constant(
               cstset_->get_cdim(), option_.relaxation);
-          std::cout << "relax!" << std::endl;
         }
         const auto init_status = solver.Init(instance, settings);
         const auto osqp_exit_code = solver.Solve();
@@ -215,27 +226,19 @@ void NLPSolver::solve(const Eigen::VectorXd &x0) {
           break;
         }
         if (qp_relax_iter == option_.max_relax_iter - 1) {
-          throw std::runtime_error("OSQP failed to solve the problem.");
+          return NLPStatus::MaxRelaxIterReached;
         }
       }
     } else {
       const auto init_status = solver.Init(instance, settings);
       const auto osqp_exit_code = solver.Solve();
       if (osqp_exit_code != osqp::OsqpExitCode::kOptimal) {
-        // throw std::runtime_error("OSQP failed to solve the problem.");
-        std::cout << "failed to solve" << std::endl;
-        return;
+        return NLPStatus::FailedQPSolver;
       }
     }
-
-    Eigen::Map<const Eigen::VectorXd> primal_solution =
-        solver.primal_solution();
-    solution_ = primal_solution;
-    // TODO: do we need to update the dual solution?
-    // Eigen::Map<const Eigen::VectorXd> dual_solution =
-    // solver.dual_solution();
+    solution_ = solver.primal_solution();
   }
-  // std::cout << solution_ << std::endl;
+  return NLPStatus::MaxIterReached;
 }
 
 } // namespace osqpsqp

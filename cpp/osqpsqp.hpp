@@ -106,6 +106,7 @@ struct NLPSolverOption {
   // for osqp's deterministic setting
   size_t max_iter = 20;
   std::optional<double> ftol = 1e-3;
+  bool verbose = true;
   bool osqp_verbose = false;
   double osqp_eps_abs = 1e-3; // osqp's default
   double osqp_eps_rel = 1e-3; // osqp's default
@@ -115,12 +116,19 @@ struct NLPSolverOption {
   size_t max_relax_iter = 10;
 };
 
+enum NLPStatus {
+  Success = 0,
+  MaxIterReached = 1,
+  MaxRelaxIterReached = 2,
+  FailedQPSolver = 3
+};
+
 class NLPSolver {
 public:
   NLPSolver(size_t nx, SMatrix P, Eigen::VectorXd q,
             std::shared_ptr<ConstraintSet> cstset,
             const NLPSolverOption &option = NLPSolverOption());
-  void solve(const Eigen::VectorXd &x0);
+  NLPStatus solve(const Eigen::VectorXd &x0);
 
   SMatrix P_;
   Eigen::VectorXd q_;
@@ -131,6 +139,7 @@ public:
   SMatrix cstset_jacobian_;
   NLPSolverOption option_;
   Eigen::VectorXd solution_;
+  double elapsed_time_;
 };
 
 } // namespace osqpsqp
