@@ -3,7 +3,7 @@ import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 
-with open('double_integrator.csv', 'r') as f:
+with open("/tmp/osqp_sqp_cpp_test-double_integrator.csv") as f:
     reader = csv.reader(f)
     data = list(reader)
 data = np.array([float(x[0]) for x in data]).reshape(-1, 6)
